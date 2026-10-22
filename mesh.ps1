@@ -24,28 +24,68 @@ param (
     [string[]]$Arguments,
 
     [Parameter()]
-    [string]$Url = ""
+    [string]$Url = "",
+
+    [Parameter()]
+    [string]$Secret = ""
 )
 
-# Load URL from config.json if not provided
-if (-not $Url) {
-    $configFile = Join-Path $PSScriptRoot "config.json"
-    if (Test-Path $configFile) {
-        try {
-            $cfg = Get-Content $configFile -Raw | ConvertFrom-Json
+# Load URL & Secret from config.json if not provided
+$configFile = Join-Path $PSScriptRoot "config.json"
+if (Test-Path $configFile) {
+    try {
+        $cfg = Get-Content $configFile -Raw | ConvertFrom-Json
+        if (-not $Url) {
             if ($cfg.worker.coordinator_url -and -not $cfg.worker.coordinator_url.Contains("127.0.0.1")) {
                 $Url = $cfg.worker.coordinator_url
             } else {
                 $Url = "https://ramusage-3656d30fbed9.herokuapp.com"
             }
-        } catch {
-            $Url = "https://ramusage-3656d30fbed9.herokuapp.com"
         }
-    } else {
-        $Url = "https://ramusage-3656d30fbed9.herokuapp.com"
+        if (-not $Secret) {
+            $Secret = $cfg.coordinator.shared_secret
+        }
+    } catch {
+        if (-not $Url) { $Url = "https://ramusage-3656d30fbed9.herokuapp.com" }
     }
 }
+if (-not $Url) {
+    $Url = "https://ramusage-3656d30fbed9.herokuapp.com"
+}
+if (-not $Secret) {
+    $Secret = "neuro_mesh_secret_2026"
+}
 $Url = $Url.TrimEnd('/')
+
+function Invoke-ClusterApi {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Path,
+        [string]$Method = "Get",
+        [object]$Body = $null,
+        [int]$TimeoutSec = 10
+    )
+    $headers = @{}
+    if ($Secret) {
+        $headers["X-Cluster-Secret"] = $Secret
+    }
+    $fullUri = "$Url$Path"
+    $params = @{
+        Uri = $fullUri
+        Method = $Method
+        TimeoutSec = $TimeoutSec
+        Headers = $headers
+    }
+    if ($Body) {
+        if ($Body -is [string]) {
+            $params["Body"] = $Body
+        } else {
+            $params["Body"] = ($Body | ConvertTo-Json -Depth 10)
+        }
+        $params["ContentType"] = "application/json"
+    }
+    return Invoke-RestMethod @params
+}
 
 function Format-Bytes([double]$mb) {
     if ($mb -ge 1024) {
@@ -60,7 +100,7 @@ function Show-Models {
     Write-Host "  [MODELS] Local AI Models (LM Studio, Ollama, and Local Files)" -ForegroundColor Cyan
     Write-Host "======================================================================" -ForegroundColor Cyan
     try {
-        $models = Invoke-RestMethod -Uri "$Url/api/models" -Method Get -TimeoutSec 10
+        $models = Invoke-ClusterApi -Path "/api/models" -Method Get -TimeoutSec 10
         if (-not $models -or $models.Count -eq 0) {
             Write-Host "  No models detected in LM Studio or models/ folder." -ForegroundColor Yellow
             Write-Host "  Models downloaded in LM Studio will automatically show up here." -ForegroundColor DarkGray
@@ -90,7 +130,7 @@ function Load-Model([string]$Identifier) {
     }
 
     try {
-        $models = Invoke-RestMethod -Uri "$Url/api/models" -Method Get -TimeoutSec 10
+        $models = Invoke-ClusterApi -Path "/api/models" -Method Get -TimeoutSec 10
         $target = $null
 
         if ($Identifier -match '^\d+$') {
@@ -119,8 +159,7 @@ function Load-Model([string]$Identifier) {
         Write-Host ""
         Write-Host "[INFO] Inspecting free RAM and deploying '$($req.model_name)' across PCs..." -ForegroundColor Cyan
 
-        $body = $req | ConvertTo-Json
-        $resp = Invoke-RestMethod -Uri "$Url/api/models/load" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 20
+        $resp = Invoke-ClusterApi -Path "/api/models/load" -Method Post -Body $req -TimeoutSec 20
 
         if ($resp.success) {
             Write-Host ""
@@ -147,7 +186,7 @@ function Load-Model([string]$Identifier) {
 function Unload-Model {
     try {
         Write-Host "[INFO] Unloading active model and freeing cluster RAM..." -ForegroundColor Cyan
-        $resp = Invoke-RestMethod -Uri "$Url/api/models/unload" -Method Post -TimeoutSec 10
+        $resp = Invoke-ClusterApi -Path "/api/models/unload" -Method Post -TimeoutSec 10
         Write-Host "[SUCCESS] $($resp.message)" -ForegroundColor Green
     } catch {
         Write-Host "[ERROR] $($_.Exception.Message)" -ForegroundColor Red
@@ -160,7 +199,7 @@ function Show-Pcs {
     Write-Host "  [PCS] Connected PCs on LAN Cluster" -ForegroundColor Cyan
     Write-Host "======================================================================" -ForegroundColor Cyan
     try {
-        $data = Invoke-RestMethod -Uri "$Url/api/pcs" -Method Get -TimeoutSec 8
+        $data = Invoke-ClusterApi -Path "/api/pcs" -Method Get -TimeoutSec 8
         Write-Host "  Total Registered PCs: $($data.total_pcs)" -ForegroundColor White
         Write-Host "  - Online PCs:         $($data.online_pcs)" -ForegroundColor Green
         Write-Host "  - Offline PCs:        $($data.offline_pcs)" -ForegroundColor Red
@@ -176,7 +215,7 @@ function Show-Pcs {
             $i++
         }
     } catch {
-        Write-Host "  [ERROR] Cannot connect to Coordinator at $Url" -ForegroundColor Red
+        Write-Host "  [ERROR] Cannot connect to Coordinator at $Url - $($_.Exception.Message)" -ForegroundColor Red
     }
     Write-Host "======================================================================" -ForegroundColor Cyan
     Write-Host ""
@@ -184,7 +223,7 @@ function Show-Pcs {
 
 function Show-Status {
     try {
-        $data = Invoke-RestMethod -Uri "$Url/api/status" -Method Get -TimeoutSec 8
+        $data = Invoke-ClusterApi -Path "/api/status" -Method Get -TimeoutSec 8
         $tot = $data.total_cluster_ram_gb
         $free = $data.free_cluster_ram_gb
         $used = [math]::Max(0.0, $tot - $free)
@@ -212,8 +251,8 @@ function Send-Prompt([string]$PromptText) {
     try {
         Write-Host ""
         Write-Host "[INFO] Dispatching prompt to cluster..." -ForegroundColor Cyan
-        $body = @{ prompt = $PromptText; max_tokens = 256 } | ConvertTo-Json
-        $resp = Invoke-RestMethod -Uri "$Url/api/infer" -Method Post -Body $body -ContentType "application/json" -TimeoutSec 60
+        $body = @{ prompt = $PromptText; max_tokens = 256 }
+        $resp = Invoke-ClusterApi -Path "/api/infer" -Method Post -Body $body -TimeoutSec 60
 
         if ($resp.success) {
             Write-Host ""
@@ -233,7 +272,7 @@ function Send-Prompt([string]$PromptText) {
 function Clean-Ram {
     try {
         Write-Host "[INFO] Purging and trimming working set RAM across all PCs..." -ForegroundColor Cyan
-        $resp = Invoke-RestMethod -Uri "$Url/api/trim" -Method Post -TimeoutSec 15
+        $resp = Invoke-ClusterApi -Path "/api/trim" -Method Post -TimeoutSec 15
         Write-Host "[SUCCESS] RAM trim complete across all cluster nodes." -ForegroundColor Green
     } catch {
         Write-Host "[ERROR] $($_.Exception.Message)" -ForegroundColor Red
@@ -267,7 +306,7 @@ function Invoke-CodeRed {
     Write-Host ""
     Write-Host "  [!] Broadcasting CODE RED uninstall signal to all Worker PCs..." -ForegroundColor Red
     try {
-        $resp = Invoke-RestMethod -Uri "$Url/api/cluster/codered" -Method Post -TimeoutSec 15
+        $resp = Invoke-ClusterApi -Path "/api/cluster/codered" -Method Post -TimeoutSec 15
         Write-Host "  [+] Coordinator response:" -ForegroundColor White
         Write-Host "      $($resp.message)" -ForegroundColor Green
         if ($resp.results) {

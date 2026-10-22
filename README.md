@@ -75,20 +75,22 @@ python -m pip install -r requirements.txt --user
 
 ## ⚙️ Configuration (`config.json`)
 
-Edit `config.json` on your Master PC:
+Edit `config.json` on your Master PC or laptop:
 
 ```json
 {
   "cluster_name": "DistributedMesh-AI",
   "coordinator": {
     "host": "0.0.0.0",
-    "port": 8500
+    "port": 8500,
+    "shared_secret": "neuro_mesh_secret_2026"
   },
   "worker": {
     "node_id": "",
     "port": 8501,
     "rpc_port": 50052,
-    "coordinator_url": "http://192.168.1.100:8500",
+    "coordinator_url": "https://ramusage-3656d30fbed9.herokuapp.com",
+    "shared_secret": "neuro_mesh_secret_2026",
     "heartbeat_interval_sec": 3
   },
   "ram_guard": {
@@ -98,41 +100,47 @@ Edit `config.json` on your Master PC:
     "auto_trim_working_set": true
   },
   "telegram": {
-    "enabled": true,
+    "enabled": false,
     "bot_token": "YOUR_TELEGRAM_BOT_TOKEN_FROM_BOTFATHER",
     "authorized_chat_ids": []
   }
 }
 ```
 
-> **Setting Up Telegram (Takes 1 Minute)**:
-> 1. In Telegram, open a chat with `@BotFather` and send `/newbot`.
-> 2. Copy the HTTP API token provided and paste it into `"bot_token"` in `config.json`.
-> 3. Set `"enabled": true`.
+---
+
+## 🔒 Security & Public URL Protection
+
+When running your coordinator on Heroku (`https://ramusage-3656d30fbed9.herokuapp.com`), the URL is reachable over the internet. **Is it protected from being hacked? YES:**
+
+1. **End-to-End Cluster Secret Token**:
+   - All cluster commands (`/api/models/load`, `/api/infer`, `/api/trim`, `/api/cluster/codered`, `/api/pcs`, `/api/heartbeat`) require the `X-Cluster-Secret` header or authenticated cookie.
+   - Any unauthorized visitor or automated internet scanner receives **`401 Unauthorized`** and is completely blocked.
+2. **Dashboard Lock Screen**:
+   - Visiting `https://ramusage-3656d30fbed9.herokuapp.com` in a browser presents an encrypted Lock Screen. No PC names, IPs, or memory statistics are visible without typing your secret password.
+3. **HTTPS / TLS 1.3 Encryption**:
+   - Traffic between your laptop, workers, and Heroku is 100% encrypted over HTTPS. Nobody on public Wi-Fi or internet service providers can intercept passwords or telemetry.
+4. **Zero Inbound Port Forwarding on Worker PCs**:
+   - Worker computers communicate **outward** to Heroku over standard HTTPS. They do NOT expose any open ports to the public internet on your home/office router. They remain shielded behind your local router NAT firewall.
+5. **Custom Secret in Heroku**:
+   - You can change your secret key anytime in your Heroku Dashboard under **Settings -> Config Vars** by adding `CLUSTER_SECRET = your_custom_password`.
 
 ---
 
 ## 🖥️ How to Run
 
-### Step 1: Start the Coordinator (on your Master LAN PC)
-In `cmd` or PowerShell:
-```bat
-start_coordinator.bat
-```
-*(Or run `python -m coordinator.coordinator`)*
+### Step 1: Cloud Coordinator (Heroku 24/7)
+Your permanent cloud coordinator is live at:
+`https://ramusage-3656d30fbed9.herokuapp.com`
 
-You will see:
-```text
-  [DistributedMesh] Cluster Coordinator Initializing
-  Coordinator IP:    192.168.1.100
-  HTTP API & UI:     http://192.168.1.100:8500
-  Telegram Bot:      ENABLED
-```
+*(Or run locally on your LAN with `start_coordinator.bat` / `python -m coordinator.coordinator`)*
 
-### Step 2: Start Workers (on each LAN PC)
-On each other PC connected to the LAN:
-```bat
-start_worker.bat --coordinator http://192.168.1.100:8500
+### Step 2: Start Workers (on each PC)
+On each worker PC, simply run:
+```powershell
+irm https://ramusageailaptop.netlify.app/join.ps1 | iex
+```
+*(Or manually run `start_worker.bat --coordinator https://ramusage-3656d30fbed9.herokuapp.com`)*
 ```
 *(Replace `192.168.1.100` with the actual IP address displayed by your coordinator)*.
 

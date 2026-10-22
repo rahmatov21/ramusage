@@ -14,7 +14,7 @@ from typing import Any, Dict
 import psutil
 import requests
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Depends
 from pydantic import BaseModel
 
 from common.model_scanner import LocalModelInfo, scan_local_models
@@ -35,7 +35,7 @@ class WorkerState:
     rpc_port: int = 50052
     coordinator_url: str = "http://127.0.0.1:8500"
     heartbeat_interval_sec: float = 3.0
-    shared_secret: str = ""
+    shared_secret: str = os.environ.get("CLUSTER_SECRET", "neuro_mesh_secret_2026")
     status: str = "online"
     rpc_manager: RPCManager = None  # type: ignore
     oom_guard: OOMGuard = None      # type: ignore
@@ -48,6 +48,23 @@ class WorkerState:
 state = WorkerState()
 
 
+def is_worker_authenticated(request: Request) -> bool:
+    if not state.shared_secret:
+        return True
+    hdr = request.headers.get("X-Cluster-Secret")
+    if hdr and hdr.strip() == state.shared_secret:
+        return True
+    param = request.query_params.get("secret")
+    if param and param.strip() == state.shared_secret:
+        return True
+    return False
+
+
+def require_worker_auth(request: Request):
+    if not is_worker_authenticated(request):
+        raise HTTPException(status_code=401, detail="Unauthorized: Worker secret mismatch.")
+
+
 class StartRPCRequest(BaseModel):
     memory_limit_mb: float = 0.0
 
@@ -57,7 +74,7 @@ def root():
     return {"status": "ok", "node_id": state.node_id, "role": "worker"}
 
 
-@app.get("/models", response_model=list[LocalModelInfo])
+@app.get("/models", response_model=list[LocalModelInfo], dependencies=[Depends(require_worker_auth)])
 def get_models():
     """Scan and return all local AI models (LM Studio, GGUFs, project models) on this PC."""
     return scan_local_models(custom_paths=state.custom_model_dirs, node_id=state.node_id)
@@ -87,7 +104,7 @@ def get_status():
     )
 
 
-@app.post("/trim")
+@app.post("/trim", dependencies=[Depends(require_worker_auth)])
 def trim_memory():
     """Trigger immediate working set trim and garbage collection."""
     before_mem = collect_node_memory()
@@ -106,7 +123,7 @@ def trim_memory():
     }
 
 
-@app.post("/rpc/start")
+@app.post("/rpc/start", dependencies=[Depends(require_worker_auth)])
 def start_rpc(req: StartRPCRequest = None):
     state.rpc_desired = True
     limit = req.memory_limit_mb if req and req.memory_limit_mb > 0 else None
@@ -118,7 +135,7 @@ def start_rpc(req: StartRPCRequest = None):
     return {"success": True, "message": msg, "info": state.rpc_manager.get_info()}
 
 
-@app.post("/rpc/stop")
+@app.post("/rpc/stop", dependencies=[Depends(require_worker_auth)])
 def stop_rpc():
     state.rpc_desired = False
     if state.rpc_manager.pid:
@@ -127,13 +144,13 @@ def stop_rpc():
     return {"success": success, "message": msg}
 
 
-@app.post("/set_layers")
+@app.post("/set_layers", dependencies=[Depends(require_worker_auth)])
 def set_layers(data: Dict[str, int]):
     state.allocated_layers = data.get("layers", 0)
     return {"success": True, "allocated_layers": state.allocated_layers}
 
 
-@app.post("/uninstall")
+@app.post("/uninstall", dependencies=[Depends(require_worker_auth)])
 def uninstall_worker():
     """Cleanly uninstall this worker: remove autostart, stop processes, and purge application directory."""
     def _do_purge():
@@ -199,7 +216,8 @@ def _on_oom_critical_alert(stats: NodeMemoryStats):
             "message": f"CRITICAL RAM WARNING: Node {state.node_id} ({state.ip_address}) has only {stats.avail_ram_mb:.1f} MB free!",
             "avail_ram_mb": stats.avail_ram_mb,
         }
-        requests.post(url, json=payload, timeout=2)
+        headers = {"X-Cluster-Secret": state.shared_secret} if state.shared_secret else {}
+        requests.post(url, json=payload, headers=headers, timeout=5)
     except Exception:
         pass
 
@@ -243,7 +261,8 @@ def _heartbeat_worker():
             )
 
             url = f"{state.coordinator_url}/api/heartbeat"
-            requests.post(url, json=node_info.model_dump(), timeout=2)
+            headers = {"X-Cluster-Secret": state.shared_secret} if state.shared_secret else {}
+            requests.post(url, json=node_info.model_dump(), headers=headers, timeout=5)
         except Exception:
             # Self-healing: network dropped, coordinator offline, or router rebooting
             pass
@@ -257,14 +276,22 @@ def main():
     parser.add_argument("--port", type=int, default=0, help="Worker HTTP port (default from config or 8501)")
     parser.add_argument("--rpc-port", type=int, default=0, help="RPC server port (default from config or 50052)")
     parser.add_argument("--coordinator", type=str, default="", help="Coordinator URL (e.g. http://192.168.1.100:8500)")
+    parser.add_argument("--secret", type=str, default="", help="Cluster shared secret")
     parser.add_argument("--config", type=str, default="config.json", help="Path to config.json")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
+    c_cfg = cfg.get("coordinator", {})
     w_cfg = cfg.get("worker", {})
     rg_cfg = cfg.get("ram_guard", {})
     eng_cfg = cfg.get("distributed_engine", {})
 
+    state.shared_secret = (
+        args.secret
+        or os.environ.get("CLUSTER_SECRET")
+        or c_cfg.get("shared_secret")
+        or w_cfg.get("shared_secret", "neuro_mesh_secret_2026")
+    )
     state.node_id = args.node_id or w_cfg.get("node_id") or get_hostname()
     state.hostname = get_hostname()
     state.ip_address = get_lan_ip()
@@ -303,6 +330,7 @@ def main():
     print(f"  Worker Port:     {state.port}")
     print(f"  RPC Port:        {state.rpc_port}")
     print(f"  Coordinator:     {state.coordinator_url}")
+    print(f"  Cluster Secret:  {'CONFIGURED (Authenticated)' if state.shared_secret else 'NONE'}")
     print(f"  OOM Guard Min:   {state.oom_guard.min_free_ram_mb:.0f} MB")
     print("=" * 60)
 

@@ -79,6 +79,9 @@ if (Test-Path $ConfigFile) {
     try {
         $Config = Get-Content $ConfigFile -Raw | ConvertFrom-Json
         $Config.worker.coordinator_url = $Coordinator
+        if (-not $Config.worker.shared_secret) {
+            $Config.worker.shared_secret = "neuro_mesh_secret_2026"
+        }
         $Config | ConvertTo-Json -Depth 10 | Set-Content $ConfigFile -Encoding UTF8
     } catch {
         Write-Warning "Could not update config.json directly, fallback to command line argument."

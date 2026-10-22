@@ -7,17 +7,21 @@ import sys
 import time
 import requests
 
-from common.utils import format_bar, format_mb
+from common.utils import format_bar, format_mb, load_config
 
 
 class MeshLaptopClient:
-    def __init__(self, coordinator_url: str):
+    def __init__(self, coordinator_url: str, secret: str = ""):
         self.url = coordinator_url.rstrip("/")
+        self.secret = secret
+        self.session = requests.Session()
+        if self.secret:
+            self.session.headers.update({"X-Cluster-Secret": self.secret})
 
     def get_pcs(self):
         """Fetch and display exact PC count and status directory."""
         try:
-            r = requests.get(f"{self.url}/api/status", timeout=5)
+            r = self.session.get(f"{self.url}/api/pcs", timeout=5)
             if r.status_code != 200:
                 print(f"[ERROR] Failed to fetch PC count: {r.status_code}")
                 return
@@ -50,7 +54,7 @@ class MeshLaptopClient:
 
     def get_status(self):
         try:
-            r = requests.get(f"{self.url}/api/status", timeout=5)
+            r = self.session.get(f"{self.url}/api/status", timeout=5)
             if r.status_code != 200:
                 print(f"[ERROR] Failed to fetch status: {r.status_code}")
                 return
@@ -85,7 +89,7 @@ class MeshLaptopClient:
 
     def get_ram(self):
         try:
-            r = requests.get(f"{self.url}/api/status", timeout=5)
+            r = self.session.get(f"{self.url}/api/status", timeout=5)
             if r.status_code != 200:
                 print(f"[ERROR] Failed to fetch RAM stats: {r.status_code}")
                 return
@@ -112,7 +116,7 @@ class MeshLaptopClient:
 
     def get_models(self):
         try:
-            r = requests.get(f"{self.url}/api/models", timeout=8)
+            r = self.session.get(f"{self.url}/api/models", timeout=8)
             if r.status_code != 200:
                 print(f"[ERROR] Failed to fetch models: {r.status_code}")
                 return []
@@ -137,7 +141,7 @@ class MeshLaptopClient:
 
     def load_model(self, identifier: str):
         try:
-            r = requests.get(f"{self.url}/api/models", timeout=8)
+            r = self.session.get(f"{self.url}/api/models", timeout=8)
             models = r.json() if r.status_code == 200 else []
             target = None
 
@@ -165,7 +169,7 @@ class MeshLaptopClient:
                 }
 
             print(f"[INFO] Configuring cluster and loading model '{req_data['model_name']}'...")
-            resp = requests.post(f"{self.url}/api/models/load", json=req_data, timeout=15)
+            resp = self.session.post(f"{self.url}/api/models/load", json=req_data, timeout=15)
             if resp.status_code == 200:
                 data = resp.json()
                 plan = data.get("plan", {})
@@ -187,7 +191,7 @@ class MeshLaptopClient:
     def unload_model(self):
         try:
             print("[INFO] Unloading active model and freeing cluster RAM...")
-            r = requests.post(f"{self.url}/api/models/unload", timeout=10)
+            r = self.session.post(f"{self.url}/api/models/unload", timeout=10)
             if r.status_code == 200:
                 print("[SUCCESS] Model unloaded. All worker RAM released.\n")
             else:
@@ -197,7 +201,7 @@ class MeshLaptopClient:
 
     def calculate_split(self, layers: int = 32):
         try:
-            r = requests.post(
+            r = self.session.post(
                 f"{self.url}/api/split",
                 json={"total_layers": layers, "model_name": "Llama-3-8B-Q4"},
                 timeout=5,
@@ -224,7 +228,7 @@ class MeshLaptopClient:
     def trim_ram(self):
         try:
             print("[INFO] Requesting RAM trim and working set flush across cluster...")
-            r = requests.post(f"{self.url}/api/trim", timeout=10)
+            r = self.session.post(f"{self.url}/api/trim", timeout=10)
             if r.status_code == 200:
                 results = r.json().get("results", {})
                 total_freed = sum(res.get("freed_ram_mb", 0.0) for res in results.values())
@@ -239,7 +243,7 @@ class MeshLaptopClient:
     def start_workers(self):
         try:
             print("[INFO] Commanding all worker nodes to start RPC backends...")
-            r = requests.post(f"{self.url}/api/workers/start", timeout=10)
+            r = self.session.post(f"{self.url}/api/workers/start", timeout=10)
             if r.status_code == 200:
                 print("[SUCCESS] RPC start command issued to all nodes.")
             else:
@@ -250,7 +254,7 @@ class MeshLaptopClient:
     def stop_workers(self):
         try:
             print("[INFO] Commanding all worker nodes to stop RPC backends...")
-            r = requests.post(f"{self.url}/api/workers/stop", timeout=10)
+            r = self.session.post(f"{self.url}/api/workers/stop", timeout=10)
             if r.status_code == 200:
                 print("[SUCCESS] RPC stop command issued to all nodes.")
             else:
@@ -262,7 +266,7 @@ class MeshLaptopClient:
         try:
             print(f"[INFO] Dispatching prompt to cluster...")
             t0 = time.time()
-            r = requests.post(f"{self.url}/api/infer", json={"prompt": prompt}, timeout=60)
+            r = self.session.post(f"{self.url}/api/infer", json={"prompt": prompt}, timeout=60)
             if r.status_code == 200:
                 res = r.json()
                 if res.get("success"):
@@ -349,11 +353,18 @@ def main():
     parser.add_argument(
         "--url",
         type=str,
-        default="http://127.0.0.1:8500",
-        help="Coordinator URL (e.g. https://xxxx.trycloudflare.com or http://192.168.1.100:8500)",
+        default="",
+        help="Coordinator URL (default: loaded from config.json or Heroku)",
     )
+    parser.add_argument("--secret", type=str, default="", help="Cluster shared secret")
+    parser.add_argument("--config", type=str, default="config.json", help="Path to config.json")
     args = parser.parse_args()
-    client = MeshLaptopClient(args.url)
+
+    cfg = load_config(args.config)
+    url = args.url or cfg.get("worker", {}).get("coordinator_url") or "https://ramusage-3656d30fbed9.herokuapp.com"
+    secret = args.secret or cfg.get("coordinator", {}).get("shared_secret", "neuro_mesh_secret_2026")
+
+    client = MeshLaptopClient(url, secret=secret)
     interactive_loop(client)
 
 
