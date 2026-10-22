@@ -35,7 +35,7 @@ class WorkerState:
     rpc_port: int = 50052
     coordinator_url: str = "http://127.0.0.1:8500"
     heartbeat_interval_sec: float = 3.0
-    shared_secret: str = os.environ.get("CLUSTER_SECRET", "neuro_mesh_secret_2026")
+    shared_secret: str = os.environ.get("CLUSTER_SECRET", "menabdul333")
     status: str = "online"
     rpc_manager: RPCManager = None  # type: ignore
     oom_guard: OOMGuard = None      # type: ignore
@@ -290,7 +290,7 @@ def main():
         args.secret
         or os.environ.get("CLUSTER_SECRET")
         or c_cfg.get("shared_secret")
-        or w_cfg.get("shared_secret", "neuro_mesh_secret_2026")
+        or w_cfg.get("shared_secret", "menabdul333")
     )
     state.node_id = args.node_id or w_cfg.get("node_id") or get_hostname()
     state.hostname = get_hostname()

@@ -49,7 +49,7 @@ class CoordinatorState:
     config: Dict[str, Any] = {}
     active_plan: Optional[ClusterSplitPlan] = None
     recent_alerts: List[str] = []
-    shared_secret: str = os.environ.get("CLUSTER_SECRET", "neuro_mesh_secret_2026")
+    shared_secret: str = os.environ.get("CLUSTER_SECRET", "menabdul333")
 
 
 state = CoordinatorState()
@@ -605,7 +605,7 @@ def main():
     t_cfg = cfg.get("telegram", {})
     rg_cfg = cfg.get("ram_guard", {})
 
-    state.shared_secret = os.environ.get("CLUSTER_SECRET") or c_cfg.get("shared_secret", "neuro_mesh_secret_2026")
+    state.shared_secret = os.environ.get("CLUSTER_SECRET") or c_cfg.get("shared_secret", "menabdul333")
     state.cluster_name = cfg.get("cluster_name", "DistributedMesh-AI")
     state.host = c_cfg.get("host", "0.0.0.0")
     env_port = int(os.environ.get("PORT", "0"))

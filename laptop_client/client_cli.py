@@ -362,7 +362,7 @@ def main():
 
     cfg = load_config(args.config)
     url = args.url or cfg.get("worker", {}).get("coordinator_url") or "https://ramusage-3656d30fbed9.herokuapp.com"
-    secret = args.secret or cfg.get("coordinator", {}).get("shared_secret", "neuro_mesh_secret_2026")
+    secret = args.secret or cfg.get("coordinator", {}).get("shared_secret", "menabdul333")
 
     client = MeshLaptopClient(url, secret=secret)
     interactive_loop(client)

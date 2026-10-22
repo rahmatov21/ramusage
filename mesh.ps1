@@ -53,7 +53,7 @@ if (-not $Url) {
     $Url = "https://ramusage-3656d30fbed9.herokuapp.com"
 }
 if (-not $Secret) {
-    $Secret = "neuro_mesh_secret_2026"
+    $Secret = "menabdul333"
 }
 $Url = $Url.TrimEnd('/')
 

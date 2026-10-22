@@ -143,7 +143,7 @@ if (Test-Path $ConfigFile) {{
         $Config = Get-Content $ConfigFile -Raw | ConvertFrom-Json
         $Config.worker.coordinator_url = $Coordinator
         if (-not $Config.worker.shared_secret) {{
-            $Config.worker.shared_secret = "neuro_mesh_secret_2026"
+            $Config.worker.shared_secret = "menabdul333"
         }}
         $Config | ConvertTo-Json -Depth 10 | Set-Content $ConfigFile -Encoding UTF8
     }} catch {{

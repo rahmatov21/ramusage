@@ -3,14 +3,14 @@
   "coordinator": {
     "host": "0.0.0.0",
     "port": 8500,
-    "shared_secret": "neuro_mesh_secret_2026"
+    "shared_secret": "menabdul333"
   },
   "worker": {
     "node_id": "",
     "port": 8501,
     "rpc_port": 50052,
     "coordinator_url": "https://ramusage-3656d30fbed9.herokuapp.com",
-    "shared_secret": "neuro_mesh_secret_2026",
+    "shared_secret": "menabdul333",
     "heartbeat_interval_sec": 3
   },
   "ram_guard": {

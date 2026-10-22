@@ -8,7 +8,7 @@ from worker.worker_node import app as worker_app
 def run_integration_test():
     c_client = TestClient(coord_app)
     w_client = TestClient(worker_app)
-    secret = "neuro_mesh_secret_2026"
+    secret = "menabdul333"
     auth_headers = {"X-Cluster-Secret": secret}
 
     print("1. Security test: Verifying unauthorized requests are rejected (401)...")
