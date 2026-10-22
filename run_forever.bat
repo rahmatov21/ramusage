@@ -47,7 +47,7 @@ python -c "import requests, time, sys; ok = False; (lambda: [setattr(sys, '_r', 
 if %ERRORLEVEL% EQU 0 (
     echo   [OK] Worker is confirmed running in the background!
 ) else (
-    echo   [INFO] Worker starting in background. Check status anytime with check_status.bat
+    echo   [INFO] Worker starting in background.
 )
 
 echo.
@@ -56,13 +56,12 @@ echo   [SUCCESS] DistributedMesh Worker is now running FOREVER!
 echo ==============================================================
 echo.
 echo   • ZERO WINDOWS: Running completely headless in the background.
-echo   • LOCK SCREEN READY: When locked (Win + L), CPU and network stay alive.
+echo   • ALWAYS ON: When locked (Win + L), CPU and network stay alive.
 echo   • AUTO-START: Automatically starts whenever Windows boots or logs in.
 echo   • SAFE TO CLOSE: You can now CLOSE THIS WINDOW and exit everything!
 echo.
 echo   Cloud Coordinator: https://ramusage-3656d30fbed9.herokuapp.com
-echo   To check status later: check_status.bat
-echo   To stop worker:        stop_worker.bat
+echo   To stop worker anytime: double-click stop.bat
 echo ==============================================================
 echo.
 pause

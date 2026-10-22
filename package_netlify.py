@@ -20,15 +20,10 @@ def build_worker_zip():
 
     worker_files = [
         "requirements.txt",
+        "start.bat",
+        "stop.bat",
         "run_forever.bat",
-        "start_worker.bat",
         "start_worker_background.vbs",
-        "start_worker_background.bat",
-        "stop_worker.bat",
-        "check_status.bat",
-        "enable_autostart_worker.bat",
-        "disable_autostart.bat",
-        "uninstall_worker.bat",
     ]
 
     worker_dirs = [

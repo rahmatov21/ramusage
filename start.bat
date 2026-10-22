@@ -5,13 +5,13 @@ title DistributedMesh AI - Worker Node Agent
 set PYTHONUNBUFFERED=1
 
 echo ==============================================================
-echo   Starting Worker Node Agent and Keep-Alive Watchdog
-echo   (Continuous 24/7 persistence - Zero Admin Rights Required)
-echo.
-echo   TIP: To run headless with ZERO windows and stay alive
-echo   even after locking your PC (Win + L), use: run_forever.bat
+echo   Starting DistributedMesh Worker Node (Foreground Mode)
 echo ==============================================================
 echo.
+
+:: Stop any conflicting worker processes first
+powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*worker.worker_node*' -or $_.CommandLine -like '*worker.watchdog*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }" >nul 2>nul
+if exist "worker.pid" del /f /q "worker.pid" >nul 2>nul
 
 :: Detect Python executable in PATH
 where python >nul 2>&1
@@ -33,6 +33,11 @@ pause
 exit /b 1
 
 :found_python
+echo [INFO] Running worker in live console mode...
+echo (To run silently in background with auto-start instead, use: run_forever.bat)
+echo (Press Ctrl+C to stop)
+echo.
+
 :watchdog_loop
 %PY_CMD% -m worker.worker_node %*
 
@@ -42,5 +47,5 @@ echo   [WATCHDOG] Worker process stopped at %DATE% %TIME%
 echo   [WATCHDOG] Automatically restarting in 2 seconds...
 echo   (Press Ctrl+C to terminate)
 echo ==============================================================
-timeout /t 2 /nobreak >nul
+ping 127.0.0.1 -n 3 >nul
 goto watchdog_loop

@@ -136,38 +136,36 @@ Your permanent cloud coordinator is live at:
 *(Or run locally on your LAN with `start_coordinator.bat` / `python -m coordinator.coordinator`)*
 
 ### Step 2: Start Workers (on each PC)
-On each worker PC, simply run:
-```powershell
-irm https://ramusageailaptop.netlify.app/join.ps1 | iex
-```
-*(Or manually run `start_worker.bat --coordinator https://ramusage-3656d30fbed9.herokuapp.com`)*
-```
-*(Replace `192.168.1.100` with the actual IP address displayed by your coordinator)*.
+On each worker PC, simply use one of the 3 simple batch files:
+
+1. **`run_forever.bat`** (Recommended ⭐): Runs silently in the background, keeps PC awake even when locked (`Win + L`), and automatically restarts on Windows reboot.
+2. **`start.bat`**: Starts the worker process in live console mode so you can see live logs.
+3. **`stop.bat`**: Cleanly stops the worker process and removes auto-start.
+
+*(Or run remotely via: `irm https://ramusageailaptop.netlify.app/join.ps1 | iex`)*
 
 Each worker immediately registers with the coordinator and begins streaming RAM statistics!
 
 ---
 
-## ⚡ Auto-Start on Boot (Light Off / On Power Recovery)
+## ⚡ Auto-Start & Always-On (Lock-Screen Persistence)
 
-To ensure your cluster automatically turns on and makes all RAM available whenever the power/electricity goes off and comes back on:
+To ensure your PC stays awake, never goes to sleep, and starts automatically on reboot:
 
 ### 1. Hardware Power-On (BIOS Setting)
-When the electricity returns, desktop PCs normally stay off until someone pushes the power button. To make them turn on automatically:
-1. Turn on the PC and repeatedly press `DEL` or `F2` to enter BIOS.
+When electricity returns after a power outage:
+1. Turn on the PC and press `DEL` or `F2` to enter BIOS.
 2. Go to **Power Management** / **Advanced**.
 3. Look for **"AC Power Loss"**, **"Restore on AC Power Loss"**, or **"State After G3"**.
 4. Change it from *Power Off* to **"Power On"** (or *Last State*).
 5. Save & Exit (`F10`). Now, the PC turns on automatically whenever wall power is restored!
 
-### 2. Software Auto-Start (Zero Admin)
-During setup, [`install.bat`](file:///c:/Users/Abdulaziz/Desktop/All%20codes/ramusage/install.bat) automatically asks you if you want to enable auto-start. You can also toggle it anytime:
-
-- **On Worker PCs**: Run [`enable_autostart_worker.bat`](file:///c:/Users/Abdulaziz/Desktop/All%20codes/ramusage/enable_autostart_worker.bat)
-- **On Master PC**: Run [`enable_autostart_coordinator.bat`](file:///c:/Users/Abdulaziz/Desktop/All%20codes/ramusage/enable_autostart_coordinator.bat)
-- **To Disable**: Run [`disable_autostart.bat`](file:///c:/Users/Abdulaziz/Desktop/All%20codes/ramusage/disable_autostart.bat)
-
-*How it works*: It places a silent VBS launcher into your Windows User Startup folder (`%APPDATA%\...\Startup`) and `HKCU\Run`. It runs **silently in the background** without any console window popup and without needing any administrator privileges. As soon as the network connects, the workers automatically reconnect and report their RAM to your laptop!
+### 2. Software 24/7 Setup (Zero Admin)
+Double-click **`run_forever.bat`** once:
+- **Always On**: Keeps CPU & network alive even when your PC is locked (`Win + L`). Your monitor can safely turn off to save power, but Windows will never enter sleep mode.
+- **Autostart**: Places a silent launcher into Windows User Startup (`%APPDATA%\...\Startup`) and `HKCU\Run`.
+- **Headless**: Runs invisibly in the background with zero open windows.
+- **To Stop**: Just double-click **`stop.bat`**.
 
 ---
 
