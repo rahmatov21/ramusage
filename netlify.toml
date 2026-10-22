@@ -1,2 +1,3 @@
 [build]
+  command = "python package_netlify.py"
   publish = "netlify_deploy"
