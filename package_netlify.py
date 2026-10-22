@@ -846,6 +846,14 @@ def write_index_html():
           <div class="link-action">Download BAT &darr;</div>
         </a>
 
+        <a class="link-row" href="https://ramusage-3656d30fbed9.herokuapp.com" target="_blank">
+          <div class="link-info">
+            <h5>⚡ Live Heroku Coordinator Dashboard</h5>
+            <span>https://ramusage-3656d30fbed9.herokuapp.com (Cluster Telemetry & Control Plane)</span>
+          </div>
+          <div class="link-action">Open Dashboard &rarr;</div>
+        </a>
+
         <a class="link-row" href="{DEFAULT_NETLIFY_ORIGIN}" target="_blank">
           <div class="link-info">
             <h5>🌐 Official Web Portal</h5>
