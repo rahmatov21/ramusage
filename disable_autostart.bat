@@ -23,6 +23,9 @@ reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "DistributedM
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "DistributedMeshCoordinator" /f >nul 2>nul
 echo [OK] Cleaned Windows CurrentUser Run registry keys.
 
+powercfg /change standby-timeout-ac 30 >nul 2>nul
+echo [OK] Restored default Windows sleep timeouts.
+
 echo.
 echo [SUCCESS] Auto-start has been completely disabled.
 echo.

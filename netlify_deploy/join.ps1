@@ -99,12 +99,14 @@ if (-not $pythonCmd) {
 $reqFile = Join-Path $TargetDir "requirements.txt"
 & python -m pip install -r $reqFile --user --quiet --no-warn-script-location
 
-# 7. Setup auto-start in HKCU\Software\Microsoft\Windows\CurrentVersion\Run
-Write-Host "[*] Configuring 24/7 background autostart on system boot..." -ForegroundColor Gray
+# 7. Setup auto-start in HKCU\Software\Microsoft\Windows\CurrentVersion\Run and prevent sleep when locked
+Write-Host "[*] Configuring 24/7 background autostart and lock-screen persistence..." -ForegroundColor Gray
 $vbsPath = Join-Path $TargetDir "start_worker_background.vbs"
 $regKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
 $regValue = "wscript.exe `"$vbsPath`""
 Set-ItemProperty -Path $regKey -Name "DistributedMeshWorker" -Value $regValue -Force
+powercfg /change standby-timeout-ac 0 2>$null
+powercfg /change hibernate-timeout-ac 0 2>$null
 
 # 8. Stop any previous worker processes first (in case of re-join)
 & cmd.exe /c "taskkill /F /FI ""COMMANDLINE like *worker.worker_node*"" >nul 2>&1"

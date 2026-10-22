@@ -10,7 +10,22 @@ import time
 from pathlib import Path
 
 
+def prevent_windows_sleep():
+    """Keep Windows system and CPU active so background worker runs 24/7 even when locked.
+    Allows the display/monitor to turn off to save power."""
+    try:
+        if sys.platform == "win32":
+            import ctypes
+            ES_CONTINUOUS = 0x80000000
+            ES_SYSTEM_REQUIRED = 0x00000001
+            ES_AWAYMODE_REQUIRED = 0x00000040
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED)
+    except Exception:
+        pass
+
+
 def run_watchdog():
+    prevent_windows_sleep()
     base_dir = Path(__file__).resolve().parent.parent
     logs_dir = base_dir / "logs"
     logs_dir.mkdir(exist_ok=True)
@@ -47,6 +62,7 @@ def run_watchdog():
         log.flush()
 
         while True:
+            prevent_windows_sleep()
             try:
                 cmd = [exe, "-m", "worker.worker_node"]
                 if len(sys.argv) > 1:

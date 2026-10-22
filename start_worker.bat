@@ -7,6 +7,9 @@ set PYTHONUNBUFFERED=1
 echo ==============================================================
 echo   Starting Worker Node Agent and Keep-Alive Watchdog
 echo   (Continuous 24/7 persistence - Zero Admin Rights Required)
+echo.
+echo   TIP: To run headless with ZERO windows and stay alive
+echo   even after locking your PC (Win + L), use: run_forever.bat
 echo ==============================================================
 echo.
 

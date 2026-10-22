@@ -7,9 +7,24 @@ import argparse
 import asyncio
 import os
 import platform
+import sys
 import threading
 import time
 from typing import Any, Dict
+
+
+def prevent_windows_sleep():
+    """Keep Windows system and CPU active so background worker runs 24/7 even when locked.
+    Allows the display/monitor to turn off to save power."""
+    try:
+        if sys.platform == "win32":
+            import ctypes
+            ES_CONTINUOUS = 0x80000000
+            ES_SYSTEM_REQUIRED = 0x00000001
+            ES_AWAYMODE_REQUIRED = 0x00000040
+            ctypes.windll.kernel32.SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED | ES_AWAYMODE_REQUIRED)
+    except Exception:
+        pass
 
 import psutil
 import requests
@@ -234,6 +249,14 @@ def _heartbeat_worker():
             if iteration % 10 == 0:
                 state.ip_address = get_lan_ip()
 
+            # Prevent Windows from sleeping when locked (resets system idle timer)
+            if sys.platform == "win32":
+                try:
+                    import ctypes
+                    ctypes.windll.kernel32.SetThreadExecutionState(0x00000001)
+                except Exception:
+                    pass
+
             # Auto-resurrect RPC backend if it was started but died unexpectedly
             if state.rpc_desired and state.rpc_manager and not state.rpc_manager.is_running:
                 state.rpc_manager.start()
@@ -334,6 +357,9 @@ def main():
     print(f"  OOM Guard Min:   {state.oom_guard.min_free_ram_mb:.0f} MB")
     print("=" * 60)
 
+    # Prevent Windows from entering sleep/standby even when locked
+    prevent_windows_sleep()
+
     try:
         uvicorn.run(app, host="127.0.0.1", port=state.port, log_level="warning")
     finally:
@@ -341,6 +367,12 @@ def main():
         state.oom_guard.stop()
         if state.rpc_manager:
             state.rpc_manager.stop()
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.kernel32.SetThreadExecutionState(0x80000000)
+            except Exception:
+                pass
 
 
 if __name__ == "__main__":
