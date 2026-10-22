@@ -97,10 +97,10 @@ $ZipUrl = "$Origin/worker.zip"
 # 2. Target directory in user profile (Zero Admin)
 $TargetDir = Join-Path $env:USERPROFILE "DistributedMeshWorker"
 
-# 3. Prompt for Coordinator IP if not provided
+# 3. Prompt for Coordinator endpoint if not provided
 if (-not $Coordinator) {{
-    Write-Host "Enter the Master PC / Coordinator address (or press Enter for default):" -ForegroundColor Yellow
-    $DefaultCoord = "http://192.168.1.100:8500"
+    Write-Host "Enter Coordinator URL (or press Enter for permanent cloud server):" -ForegroundColor Yellow
+    $DefaultCoord = "https://ramusage-3656d30fbed9.herokuapp.com"
     $InputCoord = Read-Host "Coordinator URL [$DefaultCoord]"
     if ([string]::IsNullOrWhiteSpace($InputCoord)) {{
         $Coordinator = $DefaultCoord

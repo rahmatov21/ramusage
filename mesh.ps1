@@ -33,15 +33,16 @@ if (-not $Url) {
     if (Test-Path $configFile) {
         try {
             $cfg = Get-Content $configFile -Raw | ConvertFrom-Json
-            $cHost = $cfg.coordinator.host
-            $cPort = $cfg.coordinator.port
-            if ($cHost -eq "0.0.0.0") { $cHost = "127.0.0.1" }
-            $Url = "http://${cHost}:${cPort}"
+            if ($cfg.worker.coordinator_url -and -not $cfg.worker.coordinator_url.Contains("127.0.0.1")) {
+                $Url = $cfg.worker.coordinator_url
+            } else {
+                $Url = "https://ramusage-3656d30fbed9.herokuapp.com"
+            }
         } catch {
-            $Url = "http://127.0.0.1:8500"
+            $Url = "https://ramusage-3656d30fbed9.herokuapp.com"
         }
     } else {
-        $Url = "http://127.0.0.1:8500"
+        $Url = "https://ramusage-3656d30fbed9.herokuapp.com"
     }
 }
 $Url = $Url.TrimEnd('/')
