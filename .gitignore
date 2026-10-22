@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.log
+logs/
+.env
+.venv
+env/
+venv/
+models/*.gguf
+!models/Meta-Llama-3-8B-Instruct.Q4_K_M.gguf

@@ -1,0 +1,33 @@
+{
+  "cluster_name": "DistributedMesh-AI",
+  "coordinator": {
+    "host": "0.0.0.0",
+    "port": 8500,
+    "shared_secret": "neuro_mesh_secret_2026"
+  },
+  "worker": {
+    "node_id": "",
+    "port": 8501,
+    "rpc_port": 50052,
+    "coordinator_url": "http://127.0.0.1:8500",
+    "heartbeat_interval_sec": 3
+  },
+  "ram_guard": {
+    "min_free_ram_mb": 800,
+    "critical_ram_mb": 400,
+    "reserve_buffer_mb": 1200,
+    "auto_trim_working_set": true,
+    "check_interval_sec": 2
+  },
+  "telegram": {
+    "enabled": true,
+    "bot_token": "YOUR_TELEGRAM_BOT_TOKEN_HERE",
+    "authorized_chat_ids": []
+  },
+  "distributed_engine": {
+    "engine_type": "llama_cpp_rpc",
+    "rpc_server_path": "bin/rpc-server.exe",
+    "default_model_layers": 32,
+    "model_name": "Llama-3-8B-Q4_K_M"
+  }
+}
