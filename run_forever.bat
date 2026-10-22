@@ -9,15 +9,30 @@ echo   (Continuous 24/7 Background Persistence - Zero Admin Required)
 echo ==============================================================
 echo.
 
-:: 1. Terminate any previous foreground or background worker processes cleanly
-echo [1/5] Stopping any running worker instances to prevent port conflicts...
-if exist "worker.pid" (
-    set /p WPID=<"worker.pid"
-    if not "%WPID%"=="" taskkill /PID %WPID% /F /T >nul 2>nul
-    del "worker.pid" >nul 2>nul
+:: Detect Python
+where python >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    set "PY_CMD=python"
+    goto :found_python
 )
-powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*worker.worker_node*' -or $_.CommandLine -like '*worker.watchdog*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }" >nul 2>nul
-ping 127.0.0.1 -n 2 >nul
+where py >nul 2>&1
+if %ERRORLEVEL% EQU 0 (
+    set "PY_CMD=py -3"
+    goto :found_python
+)
+echo [ERROR] Python 3 was not found in PATH!
+echo Please install Python 3.9+ and ensure "Add python to PATH" is checked.
+echo.
+pause
+exit /b 1
+
+:found_python
+:: Verify and auto-install dependencies if missing (zero admin)
+%PY_CMD% -c "import fastapi, uvicorn, psutil, requests, pydantic" >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [INFO] First-time setup: Installing required libraries...
+    %PY_CMD% -m pip install -r requirements.txt --user --quiet --no-warn-script-location
+)
 
 :: 2. Configure Windows Power settings (Zero Admin Required)
 echo [2/5] Configuring Windows sleep prevention (keeps active when locked)...

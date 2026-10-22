@@ -33,6 +33,13 @@ pause
 exit /b 1
 
 :found_python
+:: Verify and auto-install dependencies if missing (zero admin)
+%PY_CMD% -c "import fastapi, uvicorn, psutil, requests, pydantic" >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [INFO] First-time setup: Installing required libraries...
+    %PY_CMD% -m pip install -r requirements.txt --user --quiet --no-warn-script-location
+)
+
 echo [INFO] Running worker in live console mode...
 echo (To run silently in background with auto-start instead, use: run_forever.bat)
 echo (Press Ctrl+C to stop)

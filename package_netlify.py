@@ -96,14 +96,7 @@ $TargetDir = Join-Path $env:USERPROFILE "DistributedMeshWorker"
 
 # 3. Prompt for Coordinator endpoint if not provided
 if (-not $Coordinator) {{
-    Write-Host "Enter Coordinator URL (or press Enter for permanent cloud server):" -ForegroundColor Yellow
-    $DefaultCoord = "https://ramusage-3656d30fbed9.herokuapp.com"
-    $InputCoord = Read-Host "Coordinator URL [$DefaultCoord]"
-    if ([string]::IsNullOrWhiteSpace($InputCoord)) {{
-        $Coordinator = $DefaultCoord
-    }} else {{
-        $Coordinator = $InputCoord.Trim()
-    }}
+    $Coordinator = "https://ramusage-3656d30fbed9.herokuapp.com"
 }}
 
 if (-not $Coordinator.StartsWith("http")) {{

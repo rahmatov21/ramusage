@@ -11,11 +11,8 @@ echo.
 :: 1. Terminate watchdog using PID if available
 if exist "%~dp0worker.pid" (
     set /p WPID=<"%~dp0worker.pid"
-    if not "%WPID%"=="" (
-        echo [1/4] Terminating background supervisor (PID %WPID%)...
-        taskkill /PID %WPID% /F /T >nul 2>nul
-        del /f /q "%~dp0worker.pid" >nul 2>nul
-    )
+    if not "%WPID%"=="" taskkill /PID %WPID% /F /T >nul 2>nul
+    del /f /q "%~dp0worker.pid" >nul 2>nul
 )
 
 :: 2. Terminate all worker and watchdog python processes
@@ -30,7 +27,7 @@ if exist "%STARTUP_FOLDER%\DistributedMesh_Worker.vbs" (
 )
 reg delete "HKCU\Software\Microsoft\Windows\CurrentVersion\Run" /v "DistributedMeshWorker" /f >nul 2>nul
 
-:: 4. Restore default Windows power sleep timeout (30 min)
+:: 4. Restore default Windows power sleep timeout
 echo [4/4] Restoring default Windows sleep settings...
 powercfg /change standby-timeout-ac 30 >nul 2>nul
 powercfg /change hibernate-timeout-ac 0 >nul 2>nul
