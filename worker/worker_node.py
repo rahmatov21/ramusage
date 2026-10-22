@@ -303,7 +303,7 @@ def main():
     # Initialize RPC Manager
     state.rpc_manager = RPCManager(
         rpc_port=state.rpc_port,
-        rpc_host="0.0.0.0",
+        rpc_host="127.0.0.1",
         binary_path=eng_cfg.get("rpc_server_path", "bin/rpc-server.exe"),
         engine_type=eng_cfg.get("engine_type", "llama_cpp_rpc"),
     )
@@ -335,7 +335,7 @@ def main():
     print("=" * 60)
 
     try:
-        uvicorn.run(app, host="0.0.0.0", port=state.port, log_level="warning")
+        uvicorn.run(app, host="127.0.0.1", port=state.port, log_level="warning")
     finally:
         state.running = False
         state.oom_guard.stop()
